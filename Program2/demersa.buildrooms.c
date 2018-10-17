@@ -24,9 +24,6 @@ struct Room {
 };
 
 
-// global variables
-
-
 // creates a directory named <YOUR STUDENT ONID USERNAME>.rooms.<PROCESS ID OF ROOMS PROGRAM>
 char* createDir() {
     char* dirName = malloc(255 * sizeof(char)); // dynamically allocate memory for strings
