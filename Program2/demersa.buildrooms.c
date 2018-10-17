@@ -12,7 +12,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+// global variables
 enum RoomType {START_ROOM, END_ROOM, MID_ROOM};
+char** roomNames[256];
+
 
 // defines a room struct
 struct Room {
@@ -41,8 +44,9 @@ char* createDir() {
 char* genRooms() {
     char* names[] = {"Bar", "Pub", "Taproom", "Lounge", "Club", "Saloon", "Tavern", "Ratskeller", "Alehouse", "Canteen"};
     int namesCount = 10;
-    char** roomNames = malloc(10 * sizeof(char*));
+    //char** roomNames = malloc(10 * sizeof(char*));
     int i =0;
+
     for (i = 0; i < 10; i++) {
         roomNames[i] = malloc(30 * sizeof(char));
     }
@@ -52,9 +56,6 @@ char* genRooms() {
         int index = rand() % (namesCount - i);  // random index between 0 and last element in array
         roomNames[i] = names[index];    // store name
         names[index] = names[namesCount - i - 1];   // overwrite with the last element in array
-
-        printf(roomNames[i]);
-        printf("\n");
     }
 
     return roomNames;   // return array of chosen names
@@ -66,13 +67,23 @@ FILE** createFiles(char* dirName) {
     // allocate memory
     FILE** filePtr = malloc(7 * sizeof(FILE**));
 
+    char filePath[256];
 
+    // create file for each room name
+    for (int i =0; i < 7; i++) {
+        sprintf(filePath, "%s/%s.txt", dirName, roomNames[i]);
+        filePtr[i] = fopen(filePath, "a+");
+        printf(filePath);
+        printf("\n");
+    }
+  return filePtr;
 }
 
 
 
 int main() {
     srand(time(NULL));      // initialize random seed
-    createDir();
-    genRooms();
+    char* dirName = createDir();
+    char** roomNames = genRooms();
+    FILE** filePtr = createFiles(dirName);
 }
