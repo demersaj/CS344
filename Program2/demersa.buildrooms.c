@@ -25,7 +25,7 @@ struct Room {
     int numConnections;
     char* roomName;
     enum RoomType roomType;
-    struct room* outBoundConnections[6];
+    struct room** outBoundConnections[6];    // stores pointer to room connections
     FILE* currentDir;
 };
 
@@ -83,11 +83,11 @@ FILE** createFiles(char* dirName) {
 }
 
 // initializes room structs
-struct Room* initRooms(char** roomNames) {
+struct Room** initRooms(char** roomNames) {
     struct Room** roomList = malloc(7 * sizeof(struct Room*));  // allocate memory for Rooms
 
     // set names to names picked above
-    for (int i =0; i < 7; i++) {
+    for (int i = 0; i < 7; i++) {
         roomList[i] = malloc(sizeof(struct Room));
         roomList[i]->roomName = malloc(32 * sizeof(char));
         roomList[i]->roomType = malloc(32 * sizeof(char));
@@ -128,57 +128,88 @@ int isGraphFull(struct Room** roomList) {
     }
 }
 
-/*
+// returns a random Room, does not validate if connection can be added
+struct Room** getRandomRoom(struct Room** room) {
+    int randomNum = rand() % 7;     // returns random number between 0 and 6
+
+    //printf(room[randomNum]->roomName);  // TODO: testing - DELETE
+    //printf("\n");
+
+    return room[randomNum];
+
+}
+
+// returns true if a connection can be added from Room (< 6 outbound connections), false otherwise
+int canAddConnectionFrom(struct Room* room) {
+    if (room->numConnections < 6) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+// returns true if a connection from Room 1 to Room 2 already exists, false otherwise
+int connectionAlreadyExists(struct Room* room1, struct Room* room2) {
+    int i = 0;
+
+    while(room1->outBoundConnections[i] != NULL) {      // while there are still connections
+        if(strcmp(room1->outBoundConnections[i], room2->roomName) == 0)     // if Room 1 connection matches Room 2
+            return TRUE;       // return true
+        else
+            i++;
+    }
+    return FALSE;
+}
+
+// connects Rooms 1 and 2 together, does not check if this connection is valid
+void connectRoom(struct Room* room1, struct Room* room2) {
+    int i = 0;
+
+    if (connectionAlreadyExists(room1, room2) == FALSE) {   // if there is not a connection between the two rooms
+        while (room1->outBoundConnections[i] != NULL){      // iterate through the list of connections and find the first empty spot
+            i++;
+        }
+        room1->outBoundConnections[i] = room2;
+    }
+}
+
+// returns true if Rooms 1 and 2 are the same Room, false otherwise
+int isSameRoom(struct Room* room1, struct Room* room2) {
+    if (strcmp(room1->roomName, room2->roomName) == 0)
+        return TRUE;
+    return FALSE;
+}
+
 // adds a random, valid outbound connection from one Room to another Room
- void addRandomConnection() {
-    Room A;
-    Room B;
+void addRandomConnection(struct Room** gameRooms) {
+    struct Room** room1;
+    struct Room** room2;
 
-    while(true) {
-        A = getRandomRoom();
+    while(TRUE) {
+        room1 = getRandomRoom(gameRooms);
 
-        if (canAddConnectionFrom(A) == true)
+        if (canAddConnectionFrom(room1) == TRUE)
             break;
     }
 
     do {
-        B = GetRandomRoom();
+        room2 = getRandomRoom(gameRooms);
     }
-    while(CanAddConnectionFrom(B) == false || IsSameRoom(A, B) == true || ConnectionAlreadyExists(A, B) == true);
+    while(canAddConnectionFrom(room2) == FALSE || isSameRoom(room1, room2) == TRUE || connectionAlreadyExists(room1, room2) == TRUE); {
 
-    ConnectRoom(A, B);  // TODO: Add this connection to the real variables,
-    ConnectRoom(B, A);  //  because this A and B will be destroyed when this function terminates
-
-}
-*/
-// returns a random Room, does not validate if connection can be added
-struct Room* getRandomRoom(struct Room** roomList) {
-    int randomNum = rand() % 7;     // returns random number between 0 and 6
-    printf(roomList[randomNum]->roomName);
-
-    return roomList[randomNum];
-
+        connectRoom(room1, room2);
+        connectRoom(room2, room1);
+    }
 }
 
-// returns true if a connection can be added from room x (< 6 outbound connections), false otherwise
-int canAddConnectionFrom(struct Room* room) {
-    return 0;
+// iterate through whole list of rooms and create connections for each one
+void initGameRooms (struct Room** gameRooms) {
+    while (isGraphFull(gameRooms) == FALSE) {
+        addRandomConnection(gameRooms);
+    }
 }
 
-// returns true if a connection from Room x to Room y already exists, false otherwise
-int connectionAlreadyExists(struct Room* x, struct Room* y) {
-    return 0;
-}
+// write the room list created in initGameRooms to the files created in createFiles
 
-// connects Rooms x and y together, does not check if this connection is valid
-void connectRoom(struct Room* x, struct Room* y) {
-
-}
-
-// returns true if Rooms x and y are the same Room, false otherwise
-int isSameRoom(struct Room* x, struct Room* y) {
-    return 0;
-}
 
 
 int main() {
@@ -186,6 +217,10 @@ int main() {
     char* dirName = createDir();
     char** roomNames = genRooms();
     FILE** filePtr = createFiles(dirName);
-    initRooms(roomNames);
-    //getRandomRoom(roomNames);     // TODO: why doesn't this work??
+    struct Room** gameRooms = initRooms(roomNames);
+    //getRandomRoom(gameRooms);       // TODO: testing only - DELETE
+    addRandomConnection(gameRooms);     // TODO: testing only - DELETE
+    initGameRooms(gameRooms);
 }
+
+// need to fix outbound connections; probably addRandomConnections function
