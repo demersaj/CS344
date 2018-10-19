@@ -134,7 +134,7 @@ struct Room getRandomRoom() {
 }
 
 
-/* EVERYTHING ABOVE HERE WORKS */
+/* ****************EVERYTHING ABOVE HERE WORKS******************* */
 
 // returns true if a connection can be added from Room (< 6 outbound connections), false otherwise
 int canAddConnectionFrom(struct Room room) {
