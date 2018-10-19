@@ -12,12 +12,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define FALSE 0
-#define TRUE 1
 
 // global variables
+#define MAX_NUM_ROOMS 7
+#define TOTAL_NUM_RUMS 10
 enum RoomType {START_ROOM, END_ROOM, MID_ROOM};
 char** roomNames[256];
+typedef enum {FALSE = 0, TRUE = 1} bool;
 
 
 // defines a room struct
@@ -28,6 +29,9 @@ struct Room {
     struct room** outBoundConnections[6];    // stores pointer to room connections
     FILE* currentDir;
 };
+
+// room global
+struct Room roomList[TOTAL_NUM_RUMS];       // global variable to store rooms
 
 
 // creates a directory named <YOUR STUDENT ONID USERNAME>.rooms.<PROCESS ID OF ROOMS PROGRAM>
@@ -47,22 +51,16 @@ char* createDir() {
 char* genRooms() {
     char* names[] = {"Bar", "Pub", "Taproom", "Lounge", "Club", "Saloon", "Tavern", "Drinkery", "Alehouse", "Canteen"};
     int namesCount = 10;
-    //char** roomNames = malloc(10 * sizeof(char*));
     int i =0;
-
-    for (i = 0; i < 10; i++) {
-        roomNames[i] = malloc(30 * sizeof(char));
-    }
 
     // loops through array 7 times and pick a random name each time
     for (i = 0; i < 7; i++) {
         int index = rand() % (namesCount - i);  // random index between 0 and last element in array
-        roomNames[i] = names[index];    // store name
+        roomList[i].roomName = names[index];    // store name
         names[index] = names[namesCount - i - 1];   // overwrite with the last element in array
+
+       // printf("%s\n", roomList[i].roomName);       // TODO: testing only - delete
     }
-
-    return roomNames;   // return array of chosen names
-
 }
 
 // creates seven different room files
@@ -74,7 +72,7 @@ FILE** createFiles(char* dirName) {
 
     // create file for each room name
     for (int i =0; i < 7; i++) {
-        sprintf(filePath, "%s/%s.txt", dirName, roomNames[i]);
+        sprintf(filePath, "%s/%s.txt", dirName, roomList[i].roomName);
         filePtr[i] = fopen(filePath, "a+");
 
         //printf("%s\n", filePath);   // TODO: testing only - DELETE
@@ -83,76 +81,75 @@ FILE** createFiles(char* dirName) {
 }
 
 // initializes room structs
-struct Room** initRooms(char** roomNames) {
-    struct Room** roomList = malloc(7 * sizeof(struct Room*));  // allocate memory for Rooms
+struct Room* initRooms() {
 
     // set names to names picked above
-    for (int i = 0; i < 7; i++) {
-        roomList[i] = malloc(sizeof(struct Room));
-        roomList[i]->roomName = malloc(32 * sizeof(char));
-        roomList[i]->roomType = malloc(32 * sizeof(char));
-        roomList[i]->roomName = roomNames[i];       // set room name
-        roomList[i]->numConnections = 0;        // make sure num connections = 0
-
-        //printf("%s\n", roomList[i]->roomName);  // TODO: testing - DELETE
+    for (int i = 0; i < MAX_NUM_ROOMS; i++) {
+        roomList[i].roomType = malloc(32 * sizeof(char));
+        roomList[i].numConnections = 0;        // make sure num connections = 0
 
         // set connections to NULL
         for (int j = 0; j < 7; j++) {
-            roomList[i]->outBoundConnections[j] = NULL;
+            roomList[i].outBoundConnections[j] = NULL;
         }
 
         // set room types
         if (i == 0) {   // for first room
-            roomList[i]->roomType = START_ROOM;
+            roomList[i].roomType = START_ROOM;
         }
         else if (i == 6) {  // for last room
-            roomList[i]->roomType = END_ROOM;
+            roomList[i].roomType = END_ROOM;
         }
         else
-            roomList[i]->roomType = MID_ROOM;
+            roomList[i].roomType = MID_ROOM;
     }
-    return roomList;
 
 }
 
 /* NOTE: some of the code outlined below is from the required reading 2.2: Program Outlining in Program 2 */
 
 // returns true if all rooms have 3 to 6 outbound connections, false otherwise
-int isGraphFull(struct Room** roomList) {
+bool isGraphFull() {
+    bool full = FALSE;
+
     for (int i =0; i < 7; i++) {
-        if (roomList[i]->numConnections >= 3 && roomList[i]->numConnections <= 6) {
-            return TRUE;
+        if (roomList[i].numConnections >= 3 && roomList[i].numConnections <= 6) {
+            full = TRUE;
         }
         else
-            return FALSE;
+            full = FALSE;
     }
+    return full;
+
 }
 
 // returns a random Room, does not validate if connection can be added
-struct Room** getRandomRoom(struct Room** room) {
+struct Room getRandomRoom() {
     int randomNum = rand() % 7;     // returns random number between 0 and 6
 
-    //printf(room[randomNum]->roomName);  // TODO: testing - DELETE
+    //printf(roomList[randomNum].roomName);  // TODO: testing - DELETE
     //printf("\n");
 
-    return room[randomNum];
-
+    return roomList[randomNum];
 }
 
+
+/* EVERYTHING ABOVE HERE WORKS */
+
 // returns true if a connection can be added from Room (< 6 outbound connections), false otherwise
-int canAddConnectionFrom(struct Room* room) {
-    if (room->numConnections < 6) {
+int canAddConnectionFrom(struct Room room) {
+    if (room.numConnections < 6) {
         return TRUE;
     }
     return FALSE;
 }
 
 // returns true if a connection from Room 1 to Room 2 already exists, false otherwise
-int connectionAlreadyExists(struct Room* room1, struct Room* room2) {
+int connectionAlreadyExists(struct Room room1, struct Room room2) {
     int i = 0;
 
-    while(room1->outBoundConnections[i] != NULL) {      // while there are still connections
-        if(strcmp(room1->outBoundConnections[i], room2->roomName) == 0)     // if Room 1 connection matches Room 2
+    while(room1.outBoundConnections[i] != NULL) {      // while there are still connections
+        if(strcmp(room1.outBoundConnections[i], room2.roomName) == 0)     // if Room 1 connection matches Room 2
             return TRUE;       // return true
         else
             i++;
@@ -161,24 +158,24 @@ int connectionAlreadyExists(struct Room* room1, struct Room* room2) {
 }
 
 // connects Rooms 1 and 2 together, does not check if this connection is valid
-void connectRoom(struct Room* room1, struct Room* room2) {
+void connectRoom(struct Room room1, struct Room room2) {
     int i = 0;
 
     if (connectionAlreadyExists(room1, room2) == FALSE) {   // if there is not a connection between the two rooms
-        while (room1->outBoundConnections[i] != NULL){      // iterate through the list of connections and find the first empty spot
+        while (room1.outBoundConnections[i] != NULL){      // iterate through the list of connections and find the first empty spot
             i++;
         }
-        room1->outBoundConnections[i] = room2;
+        room1.outBoundConnections[i] = room2.roomName;
     }
 }
 
 // returns true if Rooms 1 and 2 are the same Room, false otherwise
-int isSameRoom(struct Room* room1, struct Room* room2) {
-    if (strcmp(room1->roomName, room2->roomName) == 0)
+int isSameRoom(struct Room room1, struct Room room2) {
+    if (strcmp(room1.roomName, room2.roomName) == 0)
         return TRUE;
     return FALSE;
 }
-
+/*
 // adds a random, valid outbound connection from one Room to another Room
 void addRandomConnection(struct Room** gameRooms) {
     struct Room** room1;
@@ -207,6 +204,7 @@ void initGameRooms (struct Room** gameRooms) {
         addRandomConnection(gameRooms);
     }
 }
+*/
 
 // write the room list created in initGameRooms to the files created in createFiles
 
@@ -215,12 +213,17 @@ void initGameRooms (struct Room** gameRooms) {
 int main() {
     srand(time(NULL));      // initialize random seed
     char* dirName = createDir();
-    char** roomNames = genRooms();
+    genRooms();
     FILE** filePtr = createFiles(dirName);
-    struct Room** gameRooms = initRooms(roomNames);
+    initRooms();
+    isGraphFull();
+    getRandomRoom();
+
+
+    //struct Room** gameRooms = initRooms(roomNames);
     //getRandomRoom(gameRooms);       // TODO: testing only - DELETE
-    addRandomConnection(gameRooms);     // TODO: testing only - DELETE
-    initGameRooms(gameRooms);
+    //addRandomConnection(gameRooms);     // TODO: testing only - DELETE
+    //initGameRooms(gameRooms);
 }
 
 // need to fix outbound connections; probably addRandomConnections function
