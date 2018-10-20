@@ -17,7 +17,6 @@
 #define MAX_NUM_ROOMS 7
 #define TOTAL_NUM_RUMS 10
 enum RoomType {START_ROOM, END_ROOM, MID_ROOM};
-char** roomNames[256];
 typedef enum {FALSE = 0, TRUE = 1} bool;
 
 
@@ -27,7 +26,6 @@ struct Room {
     char* roomName;
     enum RoomType roomType;
     struct Room* outBoundConnections[6];    // stores pointer to room connections
-    FILE* currentDir;
 };
 
 // room global
@@ -73,11 +71,14 @@ void createFiles(char* dirName) {
         sprintf(filePath, "%s/%s.txt", dirName, roomList[i].roomName);  // create file name
         filePtr = fopen(filePath, "w");      // write file
         fprintf(filePtr, "ROOM NAME: %s\n", roomList[i].roomName);     // writes room name to file
-        for (int j = 0; j < roomList[i].numConnections; j++) {      // iterates through each room connection and writes connection to file
+
+        // iterates through each room connection and writes connection to file
+        for (int j = 0; j < roomList[i].numConnections; j++) {
             fprintf(filePtr, "CONNECTION %d: %s\n", j+1, roomList[i].outBoundConnections[j]->roomName);
         }
 
-        if (roomList[i].roomType == 0) {        // prints room type since enum strings cannot be printed
+        // prints room type since enum strings cannot be printed
+        if (roomList[i].roomType == 0) {
             fprintf(filePtr, "ROOM TYPE: START_ROOM\n");
         }
         else if (roomList[i].roomType == 1) {
@@ -212,13 +213,13 @@ void initGameRooms () {
     while (isGraphFull() == FALSE) {
         addRandomConnection();
     }
+    // TODO: make sure all the rooms have different amount of connections
 }
 
 
 // write the room list created in initGameRooms to the files created in createFiles
 void writeRoomList() {
     char* dirName;
-    FILE *filePtr;
 
     dirName = createDir();      // creates directory
     createFiles(dirName);  // creates the files for the directory
@@ -230,4 +231,6 @@ int main() {
     initRooms();
     initGameRooms();
     writeRoomList();
+
+    return 0;
 }
