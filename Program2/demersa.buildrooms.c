@@ -116,7 +116,7 @@ void initRooms() {
 
 /* NOTE: some of the code outlined below is from the required reading 2.2: Program Outlining in Program 2 */
 
-// returns true if all rooms have 3 to 6 outbound connections, false otherwise
+// returns room index if the room has 3 to 6 outbound connections, -1 otherwise
 int isGraphFull(struct Room* roomList) {
     int i;
 
