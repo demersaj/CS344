@@ -44,5 +44,6 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
-  "CMakeFiles/buildrooms.dir/DependInfo.cmake"
+  "CMakeFiles/adventure.dir/DependInfo.cmake"
+  "CMakeFiles/buidlrooms.dir/DependInfo.cmake"
   )

@@ -54,45 +54,82 @@ RM = /Applications/CLion.app/Contents/bin/cmake/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/Users/andrew/Documents/School/CS 344/Program2"
+CMAKE_SOURCE_DIR = /Users/andrew/Documents/School/CS344/Program2
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/Users/andrew/Documents/School/CS 344/Program2/cmake-build-debug"
+CMAKE_BINARY_DIR = /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug
 
 #=============================================================================
-# Target rules for target CMakeFiles/buildrooms.dir
+# Target rules for target CMakeFiles/adventure.dir
 
 # All Build rule for target.
-CMakeFiles/buildrooms.dir/all:
-	$(MAKE) -f CMakeFiles/buildrooms.dir/build.make CMakeFiles/buildrooms.dir/depend
-	$(MAKE) -f CMakeFiles/buildrooms.dir/build.make CMakeFiles/buildrooms.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir="/Users/andrew/Documents/School/CS 344/Program2/cmake-build-debug/CMakeFiles" --progress-num=1,2 "Built target buildrooms"
-.PHONY : CMakeFiles/buildrooms.dir/all
+CMakeFiles/adventure.dir/all:
+	$(MAKE) -f CMakeFiles/adventure.dir/build.make CMakeFiles/adventure.dir/depend
+	$(MAKE) -f CMakeFiles/adventure.dir/build.make CMakeFiles/adventure.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles --progress-num=1,2 "Built target adventure"
+.PHONY : CMakeFiles/adventure.dir/all
 
 # Include target in all.
-all: CMakeFiles/buildrooms.dir/all
+all: CMakeFiles/adventure.dir/all
 
 .PHONY : all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/buildrooms.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/Users/andrew/Documents/School/CS 344/Program2/cmake-build-debug/CMakeFiles" 2
-	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/buildrooms.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start "/Users/andrew/Documents/School/CS 344/Program2/cmake-build-debug/CMakeFiles" 0
-.PHONY : CMakeFiles/buildrooms.dir/rule
+CMakeFiles/adventure.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/adventure.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles 0
+.PHONY : CMakeFiles/adventure.dir/rule
 
 # Convenience name for target.
-buildrooms: CMakeFiles/buildrooms.dir/rule
+adventure: CMakeFiles/adventure.dir/rule
 
-.PHONY : buildrooms
-
-# clean rule for target.
-CMakeFiles/buildrooms.dir/clean:
-	$(MAKE) -f CMakeFiles/buildrooms.dir/build.make CMakeFiles/buildrooms.dir/clean
-.PHONY : CMakeFiles/buildrooms.dir/clean
+.PHONY : adventure
 
 # clean rule for target.
-clean: CMakeFiles/buildrooms.dir/clean
+CMakeFiles/adventure.dir/clean:
+	$(MAKE) -f CMakeFiles/adventure.dir/build.make CMakeFiles/adventure.dir/clean
+.PHONY : CMakeFiles/adventure.dir/clean
+
+# clean rule for target.
+clean: CMakeFiles/adventure.dir/clean
+
+.PHONY : clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/buidlrooms.dir
+
+# All Build rule for target.
+CMakeFiles/buidlrooms.dir/all:
+	$(MAKE) -f CMakeFiles/buidlrooms.dir/build.make CMakeFiles/buidlrooms.dir/depend
+	$(MAKE) -f CMakeFiles/buidlrooms.dir/build.make CMakeFiles/buidlrooms.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles --progress-num=3,4 "Built target buidlrooms"
+.PHONY : CMakeFiles/buidlrooms.dir/all
+
+# Include target in all.
+all: CMakeFiles/buidlrooms.dir/all
+
+.PHONY : all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/buidlrooms.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles 2
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/buidlrooms.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles 0
+.PHONY : CMakeFiles/buidlrooms.dir/rule
+
+# Convenience name for target.
+buidlrooms: CMakeFiles/buidlrooms.dir/rule
+
+.PHONY : buidlrooms
+
+# clean rule for target.
+CMakeFiles/buidlrooms.dir/clean:
+	$(MAKE) -f CMakeFiles/buidlrooms.dir/build.make CMakeFiles/buidlrooms.dir/clean
+.PHONY : CMakeFiles/buidlrooms.dir/clean
+
+# clean rule for target.
+clean: CMakeFiles/buidlrooms.dir/clean
 
 .PHONY : clean
 

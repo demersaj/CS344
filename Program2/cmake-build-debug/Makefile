@@ -48,10 +48,10 @@ RM = /Applications/CLion.app/Contents/bin/cmake/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/Users/andrew/Documents/School/CS 344/Program2"
+CMAKE_SOURCE_DIR = /Users/andrew/Documents/School/CS344/Program2
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/Users/andrew/Documents/School/CS 344/Program2/cmake-build-debug"
+CMAKE_BINARY_DIR = /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/Users/andrew/Documents/School/CS 344/Program2/cmake-build-debug/CMakeFiles" "/Users/andrew/Documents/School/CS 344/Program2/cmake-build-debug/CMakeFiles/progress.marks"
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start "/Users/andrew/Documents/School/CS 344/Program2/cmake-build-debug/CMakeFiles" 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/andrew/Documents/School/CS344/Program2/cmake-build-debug/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -111,17 +111,57 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named buildrooms
+# Target rules for targets named adventure
 
 # Build rule for target.
-buildrooms: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 buildrooms
-.PHONY : buildrooms
+adventure: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 adventure
+.PHONY : adventure
 
 # fast build rule for target.
-buildrooms/fast:
-	$(MAKE) -f CMakeFiles/buildrooms.dir/build.make CMakeFiles/buildrooms.dir/build
-.PHONY : buildrooms/fast
+adventure/fast:
+	$(MAKE) -f CMakeFiles/adventure.dir/build.make CMakeFiles/adventure.dir/build
+.PHONY : adventure/fast
+
+#=============================================================================
+# Target rules for targets named buidlrooms
+
+# Build rule for target.
+buidlrooms: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 buidlrooms
+.PHONY : buidlrooms
+
+# fast build rule for target.
+buidlrooms/fast:
+	$(MAKE) -f CMakeFiles/buidlrooms.dir/build.make CMakeFiles/buidlrooms.dir/build
+.PHONY : buidlrooms/fast
+
+demersa.adventure.o: demersa.adventure.c.o
+
+.PHONY : demersa.adventure.o
+
+# target to build an object file
+demersa.adventure.c.o:
+	$(MAKE) -f CMakeFiles/adventure.dir/build.make CMakeFiles/adventure.dir/demersa.adventure.c.o
+.PHONY : demersa.adventure.c.o
+
+demersa.adventure.i: demersa.adventure.c.i
+
+.PHONY : demersa.adventure.i
+
+# target to preprocess a source file
+demersa.adventure.c.i:
+	$(MAKE) -f CMakeFiles/adventure.dir/build.make CMakeFiles/adventure.dir/demersa.adventure.c.i
+.PHONY : demersa.adventure.c.i
+
+demersa.adventure.s: demersa.adventure.c.s
+
+.PHONY : demersa.adventure.s
+
+# target to generate assembly for a file
+demersa.adventure.c.s:
+	$(MAKE) -f CMakeFiles/adventure.dir/build.make CMakeFiles/adventure.dir/demersa.adventure.c.s
+.PHONY : demersa.adventure.c.s
 
 demersa.buildrooms.o: demersa.buildrooms.c.o
 
@@ -129,7 +169,7 @@ demersa.buildrooms.o: demersa.buildrooms.c.o
 
 # target to build an object file
 demersa.buildrooms.c.o:
-	$(MAKE) -f CMakeFiles/buildrooms.dir/build.make CMakeFiles/buildrooms.dir/demersa.buildrooms.c.o
+	$(MAKE) -f CMakeFiles/buidlrooms.dir/build.make CMakeFiles/buidlrooms.dir/demersa.buildrooms.c.o
 .PHONY : demersa.buildrooms.c.o
 
 demersa.buildrooms.i: demersa.buildrooms.c.i
@@ -138,7 +178,7 @@ demersa.buildrooms.i: demersa.buildrooms.c.i
 
 # target to preprocess a source file
 demersa.buildrooms.c.i:
-	$(MAKE) -f CMakeFiles/buildrooms.dir/build.make CMakeFiles/buildrooms.dir/demersa.buildrooms.c.i
+	$(MAKE) -f CMakeFiles/buidlrooms.dir/build.make CMakeFiles/buidlrooms.dir/demersa.buildrooms.c.i
 .PHONY : demersa.buildrooms.c.i
 
 demersa.buildrooms.s: demersa.buildrooms.c.s
@@ -147,7 +187,7 @@ demersa.buildrooms.s: demersa.buildrooms.c.s
 
 # target to generate assembly for a file
 demersa.buildrooms.c.s:
-	$(MAKE) -f CMakeFiles/buildrooms.dir/build.make CMakeFiles/buildrooms.dir/demersa.buildrooms.c.s
+	$(MAKE) -f CMakeFiles/buidlrooms.dir/build.make CMakeFiles/buidlrooms.dir/demersa.buildrooms.c.s
 .PHONY : demersa.buildrooms.c.s
 
 # Help Target
@@ -156,9 +196,13 @@ help:
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
+	@echo "... adventure"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... buildrooms"
+	@echo "... buidlrooms"
+	@echo "... demersa.adventure.o"
+	@echo "... demersa.adventure.i"
+	@echo "... demersa.adventure.s"
 	@echo "... demersa.buildrooms.o"
 	@echo "... demersa.buildrooms.i"
 	@echo "... demersa.buildrooms.s"
