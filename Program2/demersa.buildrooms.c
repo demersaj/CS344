@@ -16,7 +16,7 @@
 // global variables
 #define MAX_NUM_ROOMS 7
 #define TOTAL_NUM_RUMS 10
-#define DEBUG 0
+#define DEBUG 1
 enum RoomType {START_ROOM, END_ROOM, MID_ROOM};
 typedef enum {false = 0, true = 1} bool;
 
