@@ -18,10 +18,13 @@ pthread_mutex_t mutex;
 // room struct to hold info about game
 struct Room {
     int numConnections;
-    char* roomName;
+    char roomName[64];
     char* roomType;
-    char* outBoundConnections[6];    // stores pointer to room connections
+    struct Room* outBoundConnections;    // stores pointer to room connections
 };
+
+// global list of game rooms
+struct Room gameRooms[MAX_NUM_ROOMS];
 
 /* The code below was adapted from Required Reading 2.4: Manipulating Directories */
 // loads files from directory and searches for starting room
@@ -53,18 +56,35 @@ char* findNewestDir() {
     return newestDirName;
 }
 
+// find the position of a room
+int findRoomPos(char* roomName){
+    int i;
+
+    for (i = 0; i< MAX_NUM_ROOMS; i++) {
+        if (strcmp(gameRooms[i].roomName, roomName) ==0 ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// reconnect two rooms that were previously connected
+reconnectRooms(int room1Pos, int room2Pos) {
+    int connect1 = gameRooms[room1Pos].numConnections;
+
+    gameRooms[room1Pos].outBoundConnections = &gameRooms[room2Pos];
+    gameRooms[room2Pos].outBoundConnections = &gameRooms[room1Pos];
+}
+
 // open the requested file and read
-struct Room* readFile(struct Room* gameRooms, char roomName[256]) {
-    char* gameDir = findNewestDir();    // load the newest dir
-    DIR* currentDir = opendir(gameDir);
-    struct dirent* curFile;
-
-    /*
-
+void readFile() {
     char* filesList[7];     // store names of files
     int i = 0;
     int j = 0;
     FILE* fptr;     // file pointer
+    DIR *dir;
+    struct dirent* fileDir;
+    char gameDir[256];
     char temp[256];
     char filename[256];
     char name[9];
@@ -72,20 +92,25 @@ struct Room* readFile(struct Room* gameRooms, char roomName[256]) {
     char buffer[256];
     char connection[9];
 
+    // clear out folder name to prevent errors
+    memset(gameDir, '\0', sizeof(gameDir));
+    strcpy(gameDir, findNewestDir());
     // make sure file exists
-    if (currentDir == NULL) {
+    if (gameDir == NULL) {
         printf("Error\n");
     }
 
     // read each file name and stores it in a list
-    while ((curFile = readdir(currentDir)) != NULL) {
-        if (!strcmp(curFile->d_name, ".") ||  !strcmp(curFile->d_name, "..")) {
-            continue;
-        }
+    if ((dir = opendir(gameDir)) != NULL) {
+        while ((fileDir = readdir(dir)) != NULL) {
+            if (!strcmp(fileDir->d_name, ".") || !strcmp(fileDir->d_name, "..")) {
+                continue;
+            }
+
             // get file names
-            filesList[i] = malloc(strlen(curFile->d_name) + 1);
-            strcpy(filesList[i], curFile->d_name);
-            sprintf(filename, "./%s/%s", gameDir, curFile->d_name);
+            filesList[i] = malloc(strlen(fileDir->d_name) + 1);
+            sprintf(filesList[i], "%s", fileDir->d_name);
+            sprintf(filename, "./%s/%s", gameDir, fileDir->d_name);
 
             // open files and get info from them
             fptr = fopen(filename, "r");
@@ -98,22 +123,22 @@ struct Room* readFile(struct Room* gameRooms, char roomName[256]) {
                 sscanf(temp, "%[^\n]", buffer);
                 if (strstr(buffer, "ROOM NAME:") != NULL) {
                     sscanf(buffer, "%*s %*s %s", name);
-                    gameRooms[i].roomName = name;
+                    strcpy(gameRooms[i].roomName, name);
 
                     printf("Found the right name! %s\n", gameRooms[i].roomName); // TODO - DELETE
                 }
 
-                // find and store the connections
+                    // find and store the connections
                 else if (strstr(buffer, "CONNECTION") != NULL) {
                     sscanf(buffer, "%*s %*s %s", connection);
-                    gameRooms[i].outBoundConnections[j] = connection;   // add the connection
+                    //strcpy(gameRooms[i].outBoundConnections[j].roomName, connection);   // add the connection
                     gameRooms[i].numConnections++;      // increment number of connections
 
-                    printf("Found a connection: %s\n", gameRooms[i].outBoundConnections[j]);    // TODO: delete
+                    //printf("Found a connection: %s\n", gameRooms[i].outBoundConnections[j].roomName);    // TODO: delete
                     j++;
                 }
 
-                // find and store room types
+                    // find and store room types
                 else if (strstr(buffer, "ROOM TYPE:") != NULL) {
                     sscanf(buffer, "%*s %*s %s", roomType);
                     gameRooms[i].roomType = roomType;
@@ -121,31 +146,26 @@ struct Room* readFile(struct Room* gameRooms, char roomName[256]) {
                     printf("Found the room type: %s\n", gameRooms[i].roomType);     //TODO: delete
                 }
             }
+
             i++;
-    }
-    return gameRooms;*/
-}
-
-// starts the player in a the start room
-struct Room startGame(struct Room* gameRoom) {
-    struct Room startRoom;
-    for (int i = 0; i < MAX_NUM_ROOMS; i++) {
-        if (strcmp(gameRoom[i].roomType, "START_ROOM") == 0) {
-            startRoom = gameRoom[i];
         }
+
     }
-    return startRoom;
 }
 
-// checks connections available
-int checkConnections(struct Room currentRoom) {
-    for (int i = 0; i < currentRoom.numConnections; i++) {
-        if (strcmp(currentRoom.roomName, currentRoom.outBoundConnections[i]) == 0)
-            return 1;
-    }
-    return 0;
-}
+void printRoomInfo() {
+    int i;
+    int j;
 
+    for (i =0; i < MAX_NUM_ROOMS; i++) {
+
+        printf("Name: %s\n", gameRooms[i].roomName);
+        for (j = 0; j < gameRooms[i].numConnections; j++) {
+            //printf("Connection %d: %s\n", i + 1, gameRooms[i].outBoundConnections[j]->roomName);
+        }
+        printf("Room Type: %s\n", gameRooms[i].roomType);
+    }
+}
 
 // play the game
 void gamePlay() { /*
@@ -219,7 +239,9 @@ void printTime() {
 int main() {
     getTime();  // TODO: DELETE
 
-    gamePlay();
+    //gamePlay();
+   // printRoomInfo();
+    readFile();
 
     return 0;
 }
