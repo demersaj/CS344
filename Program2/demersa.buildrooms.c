@@ -16,9 +16,9 @@
 // global variables
 #define MAX_NUM_ROOMS 7
 #define TOTAL_NUM_RUMS 10
+#define DEBUG 0
 enum RoomType {START_ROOM, END_ROOM, MID_ROOM};
-typedef enum {FALSE = 0, TRUE = 1} bool;
-
+typedef enum {false = 0, true = 1} bool;
 
 // defines a room struct
 struct Room {
@@ -30,7 +30,6 @@ struct Room {
 
 // room global
 struct Room roomList[TOTAL_NUM_RUMS];       // global variable to store rooms
-
 
 // creates a directory named <YOUR STUDENT ONID USERNAME>.rooms.<PROCESS ID OF ROOMS PROGRAM>
 char* createDir() {
@@ -56,36 +55,32 @@ char* genRooms() {
         int index = rand() % (namesCount - i);  // random index between 0 and last element in array
         roomList[i].roomName = names[index];    // store name
         names[index] = names[namesCount - i - 1];   // overwrite with the last element in array
-
-       // printf("%s\n", roomList[i].roomName);       // TODO: testing only - delete
     }
 }
 
 // creates seven different room files and fills with info
 void createFiles(char* dirName) {
-    FILE* filePath[256];
-    FILE* filePtr;
+    chdir(dirName);     // change to correct directory
+    char filePath[256];
 
-    // create file for each room name and files
-    for (int i =0; i < MAX_NUM_ROOMS; i++) {
-        sprintf(filePath, "%s/%s.txt", dirName, roomList[i].roomName);  // create file name
-        filePtr = fopen(filePath, "w");      // write file
-        fprintf(filePtr, "ROOM NAME: %s\n", roomList[i].roomName);     // writes room name to file
+    for (int i = 0; i< MAX_NUM_ROOMS; i++) {
+        sprintf(filePath, "%s.txt", roomList[i].roomName);  // create file name
+        FILE* filePtr = fopen(filePath, "w");   // open file and write to it
+        fprintf(filePtr, "ROOM NAME: %s\n", roomList[i].roomName);      // write room name to file
 
-        // iterates through each room connection and writes connection to file
         for (int j = 0; j < roomList[i].numConnections; j++) {
-            fprintf(filePtr, "CONNECTION %d: %s\n", j+1, roomList[i].outBoundConnections[j]->roomName);
+            fprintf(filePtr, "CONNECTION %d: %s\n", j + 1, roomList[i].outBoundConnections[j]->roomName);
         }
 
-        // prints room type since enum strings cannot be printed
-        if (roomList[i].roomType == 0) {
-            fprintf(filePtr, "ROOM TYPE: START_ROOM\n");
-        }
-        else if (roomList[i].roomType == 1) {
-            fprintf(filePtr, "ROOM TYPE: MID_ROOM\n");
-        }
-        else if (roomList[i].roomType == 2) {
-            fprintf(filePtr, "ROOM TYPE: END_ROOM\n");
+        switch(roomList[i].roomType) {
+            case START_ROOM:
+                fprintf(filePtr, "ROOM TYPE: START_ROOM\n");
+                break;
+            case MID_ROOM:
+                fprintf(filePtr, "ROOM TYPE: MID_ROOM\n");
+                break;
+            case END_ROOM:
+                fprintf(filePtr, "ROOM TYPE: END_ROOM\n");
         }
     }
 }
@@ -119,18 +114,14 @@ void initRooms() {
 /* NOTE: some of the code outlined below is from the required reading 2.2: Program Outlining in Program 2 */
 
 // returns true if all rooms have 3 to 6 outbound connections, false otherwise
-bool isGraphFull() {
-    bool full = FALSE;
+int isGraphFull(struct Room* roomList) {
 
-    for (int i =0; i < 7; i++) {
-        if (roomList[i].numConnections >= 3 && roomList[i].numConnections <= 6) {
-            full = TRUE;
+    for (int i = 0; i < MAX_NUM_ROOMS; i++) {
+        if (roomList[i].numConnections  < 3) {
+            return i;
         }
-        else
-            full = FALSE;
     }
-    return full;
-
+    return -1;
 }
 
 // returns a random Room, does not validate if connection can be added
@@ -143,9 +134,9 @@ int getRandomRoom() {
 // returns true if a connection can be added from Room (< 6 outbound connections), false otherwise
 bool canAddConnectionFrom(struct Room room) {
     if (room.numConnections < 6) {
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 }
 
 // returns true if a connection from Room 1 to Room 2 already exists, false otherwise
@@ -153,25 +144,27 @@ bool connectionAlreadyExists(int room1Pos, int Room2Pos) {
     int i = 0;
 
     while(roomList[room1Pos].outBoundConnections[i] != NULL) {      // while there are still connections
-        if(strcmp(roomList[room1Pos].outBoundConnections[i], roomList[Room2Pos].roomName) == 0)     // if Room 1 connection matches Room 2
-            return TRUE;       // return true
+        if(strcmp(roomList[room1Pos].outBoundConnections[i]->roomName, roomList[Room2Pos].roomName) == 0)     // if Room 1 connection matches Room 2
+            return true;       // return true
         else
             i++;
     }
-    return FALSE;
+    return false;
 }
 
 // connects Rooms 1 and 2 together, does not check if this connection is valid
 void connectRoom(int room1Pos, int room2Pos) {
     int i = 0;
+    int j = 0;
 
-
-    if (connectionAlreadyExists(room1Pos, room2Pos) == FALSE) {   // if there is not a connection between the two rooms
-        while (roomList[room1Pos].outBoundConnections[i] != NULL){      // iterate through the list of connections and find the first empty spot
+    if (connectionAlreadyExists(room1Pos, room2Pos) == false) {   // if there is not a connection between the two rooms
+        while (roomList[room1Pos].outBoundConnections[i] != NULL)      // iterate through the list of connections and find the first empty spot
             i++;
-        }
+        while (roomList[room2Pos].outBoundConnections[j] != NULL)
+            j++;
+
         roomList[room1Pos].outBoundConnections[i] = &roomList[room2Pos];
-        roomList[room2Pos].outBoundConnections[i] = &roomList[room1Pos];
+        roomList[room2Pos].outBoundConnections[j] = &roomList[room1Pos];
 
         // increment number of connections for both rooms
         roomList[room1Pos].numConnections++;
@@ -182,40 +175,38 @@ void connectRoom(int room1Pos, int room2Pos) {
 // returns true if Rooms 1 and 2 are the same Room, false otherwise
 bool isSameRoom(int room1Pos, int room2Pos) {
     if (strcmp(roomList[room1Pos].roomName, roomList[room2Pos].roomName) == 0)
-        return TRUE;
-    return FALSE;
+        return true;
+    return false;
 }
 
 // adds a random, valid outbound connection from one Room to another Room
-void addRandomConnection() {
-    int room1Pos = 0;
+void addRandomConnection(int room1Pos, struct room* gameRoom) {
+
     int room2Pos = 0;
 
-    while(TRUE) {
-        room1Pos = getRandomRoom();
+    while(true) {
 
-        if (canAddConnectionFrom(roomList[room1Pos]) == TRUE)
+        if (canAddConnectionFrom(roomList[room1Pos]) == true)
             break;
     }
 
     do {
         room2Pos = getRandomRoom();
     }
-    while(canAddConnectionFrom(roomList[room2Pos]) == FALSE || isSameRoom(room1Pos, room2Pos) == TRUE || connectionAlreadyExists(room1Pos, room2Pos) == TRUE);
+    while(canAddConnectionFrom(roomList[room2Pos]) == false || isSameRoom(room1Pos, room2Pos) == true || connectionAlreadyExists(room1Pos, room2Pos) == true);
 
     connectRoom(room1Pos, room2Pos);
     connectRoom(room2Pos, room1Pos);
 }
 
-
 // iterate through whole list of rooms and create connections for each one
 void initGameRooms () {
-    while (isGraphFull() == FALSE) {
-        addRandomConnection();
-    }
-    // TODO: make sure all the rooms have different amount of connections
-}
+    int roomIndex;
 
+    while ((roomIndex = isGraphFull(roomList)) != -1) {
+        addRandomConnection(roomIndex, roomList);
+    }
+}
 
 // write the room list created in initGameRooms to the files created in createFiles
 void writeRoomList() {
@@ -225,12 +216,66 @@ void writeRoomList() {
     createFiles(dirName);  // creates the files for the directory
 }
 
+
+void getRoomType(struct Room* r, char* buff, int buffLen){
+    if (r == NULL || buff == NULL)
+        return;
+
+    int len = buffLen - 1;
+    memset(buff, 0, buffLen);
+
+    switch (r->roomType) {
+        case START_ROOM:
+            if (10 < len)
+                len = 10;
+            strncpy(buff, "START_ROOM", len);
+            break;
+        case MID_ROOM:
+            if (8 < len)
+                len = 8;
+            strncpy(buff, "MID_ROOM", len);
+            break;
+        case END_ROOM:
+            if (8 < len)
+                len = 8;
+            strncpy(buff, "END_ROOM", len);
+            break;
+    }
+}
+
+void printRoom(struct Room* r){
+    if(r == NULL)
+        return;
+    if (DEBUG) {
+        printf("Name: %s\n", r->roomName);
+        printf("Connected rooms: %i\n", r->numConnections);
+        char rType[12];
+        getRoomType(r, rType, 12);
+        printf("Room type: %s\n", rType);
+        printf("RoomID: 0x%x\n", r);
+        printf("Adjacent rooms: \n");
+        for (int i = 0; i < 7; i++) {
+            printf("\t0x%x\n", r->outBoundConnections[i]);
+        }
+    }
+}
+
+void listAllRooms(struct Room* roomList, int numRoom) {
+    printf("\n\n\n\n\n");
+    for (int i = 0; i < numRoom; i++) {
+        printRoom(&roomList[i]);
+    }
+}
+
+
 int main() {
     srand(time(NULL));      // initialize random seed
     genRooms();
     initRooms();
     initGameRooms();
     writeRoomList();
+    if (DEBUG)
+        listAllRooms(roomList, 7);
 
     return 0;
 }
