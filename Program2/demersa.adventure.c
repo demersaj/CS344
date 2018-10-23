@@ -11,6 +11,7 @@
 #include <time.h>
 
 #define MAX_NUM_ROOMS 7
+typedef enum {false = 0, true = 1} bool;
 
 // global mutex
 pthread_mutex_t mutex;
@@ -19,8 +20,8 @@ pthread_mutex_t mutex;
 struct Room {
     int numConnections;
     char roomName[64];
-    char* roomType;
-    struct Room* outBoundConnections;    // stores pointer to room connections
+    char roomType[64];
+    char outBoundConnections[9][64];    // stores pointer to room connections
 };
 
 // global list of game rooms
@@ -56,27 +57,7 @@ char* findNewestDir() {
     return newestDirName;
 }
 
-// find the position of a room
-int findRoomPos(char* roomName){
-    int i;
-
-    for (i = 0; i< MAX_NUM_ROOMS; i++) {
-        if (strcmp(gameRooms[i].roomName, roomName) ==0 ) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-// reconnect two rooms that were previously connected
-reconnectRooms(int room1Pos, int room2Pos) {
-    int connect1 = gameRooms[room1Pos].numConnections;
-
-    gameRooms[room1Pos].outBoundConnections = &gameRooms[room2Pos];
-    gameRooms[room2Pos].outBoundConnections = &gameRooms[room1Pos];
-}
-
-// open the requested file and read
+// open the requested file and read; populate name and room type
 void readFile() {
     char* filesList[7];     // store names of files
     int i = 0;
@@ -115,42 +96,67 @@ void readFile() {
             // open files and get info from them
             fptr = fopen(filename, "r");
 
-
             while (feof(fptr) == 0) {
                 fgets(temp, 256, fptr);
 
-                // find and store the name
+                // find and store the names
                 sscanf(temp, "%[^\n]", buffer);
                 if (strstr(buffer, "ROOM NAME:") != NULL) {
                     sscanf(buffer, "%*s %*s %s", name);
                     strcpy(gameRooms[i].roomName, name);
 
-                    printf("Found the right name! %s\n", gameRooms[i].roomName); // TODO - DELETE
+                    //printf("Found the right name! %s\n", gameRooms[i].roomName); // TODO - DELETE
                 }
 
                     // find and store the connections
                 else if (strstr(buffer, "CONNECTION") != NULL) {
                     sscanf(buffer, "%*s %*s %s", connection);
-                    //strcpy(gameRooms[i].outBoundConnections[j].roomName, connection);   // add the connection
+                    strcpy(gameRooms[i].outBoundConnections[j], connection);   // add the connection
                     gameRooms[i].numConnections++;      // increment number of connections
 
-                    //printf("Found a connection: %s\n", gameRooms[i].outBoundConnections[j].roomName);    // TODO: delete
+                    //printf("Found a connection: %s\n", gameRooms[i].outBoundConnections[j]);    // TODO: delete
                     j++;
                 }
 
                     // find and store room types
                 else if (strstr(buffer, "ROOM TYPE:") != NULL) {
                     sscanf(buffer, "%*s %*s %s", roomType);
-                    gameRooms[i].roomType = roomType;
+                    strcpy(gameRooms[i].roomType, roomType);
 
-                    printf("Found the room type: %s\n", gameRooms[i].roomType);     //TODO: delete
+                    //printf("Found the room type: %s\n", gameRooms[i].roomType);     //TODO: delete
                 }
-            }
 
+            }
+            j = 0;
             i++;
         }
 
     }
+}
+
+int isEndRoom(char* room){
+    int i;
+
+    for(i = 0; i <MAX_NUM_ROOMS; i++) {
+        if (strcmp(room, gameRooms[i].roomName) == 0) {
+            if (strcmp(gameRooms[i].roomType, "END_ROOM") == 0) {
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+// returns the position of the starting room
+int getStartRoom() {
+    int i;
+
+    for (i = 0; i < MAX_NUM_ROOMS; i++) {   // iterate through the rooms
+        if (strcmp(gameRooms[i].roomType, "START_ROOM") == 0) {    // if the room type is start room
+            return i;
+        }
+    }
+    return -1;
 }
 
 void printRoomInfo() {
@@ -161,48 +167,72 @@ void printRoomInfo() {
 
         printf("Name: %s\n", gameRooms[i].roomName);
         for (j = 0; j < gameRooms[i].numConnections; j++) {
-            //printf("Connection %d: %s\n", i + 1, gameRooms[i].outBoundConnections[j]->roomName);
+            printf("Connection %d: %s\n", i + 1, gameRooms[i].outBoundConnections[j]);
         }
         printf("Room Type: %s\n", gameRooms[i].roomType);
     }
 }
 
+// returns the room index
+int getRoom(char* room) {
+    int i;
+
+    for (i = 0; i < MAX_NUM_ROOMS; i++) {
+        if (strcmp(gameRooms[i].roomName, room) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 // play the game
-void gamePlay() { /*
-    int stepCount = 0;
-    char* roomPath[1024];
-    int end = -1;
+void gamePlay() {
+    int stepCount = 0;  // keeps track of how many rooms the user has been in
+    char roomPath[9][200];  // tracks the rooms the user has been in
+    bool end = false;   // end game condition
+    char buffer[256];
+    struct Room curRoom;
+    int i;
+    bool validInput = false;
 
     // read the game rooms from file
-    struct Room gameRooms[MAX_NUM_ROOMS];
-    readFiles(gameRooms);
+    readFile();
 
     // output the players current location
-    struct Room startRoom = startGame(gameRooms);
-    struct Room room = startRoom;
+    int start = getStartRoom();
+    curRoom = gameRooms[start];
     do {
-        printf("\nCURRENT LOCATION: %s\n", room.roomName);
+        printf("\nCURRENT LOCATION: %s\n", curRoom.roomName);
 
         // list the possible connections
         printf("POSSIBLE CONNECTIONS: ");
-        for (int i =0; i < room.numConnections; i++) {
-            printf("%s,", room.outBoundConnections[i]);
+        for (i = 0; i < curRoom.numConnections - 1; i++) {  // print all but last rooms
+            printf("%s, ", curRoom.outBoundConnections[i]);
         }
+        printf("%s.\n", curRoom.outBoundConnections[i]);    // print last room
 
         // ask player where they want to go next
-        printf(".\nWHERE TO? >");
-        //getline
+        printf("WHERE TO? >");
+        memset(buffer, '\0', sizeof(buffer));   // clean out buffer, just in case
+        scanf("%256s", buffer);
 
+        // if choice is valid
+            // move to room
+            // increment stepcount
+            // add to room path
+        // else
+            // output error message
+            // reprompt for input
 
         // end condition
-        if (room.roomType == "END_ROOM") {
+        if (curRoom.roomType == "END_ROOM") {
             printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
             printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", stepCount);
-            end = -1;
+            end = true;
         }
     }
 
-    while (end == 0);*/
+    while (end == false);
 }
 
 // controls threading of program
@@ -239,9 +269,8 @@ void printTime() {
 int main() {
     getTime();  // TODO: DELETE
 
-    //gamePlay();
-   // printRoomInfo();
-    readFile();
+    gamePlay();
+    isEndRoom("Alehouse");
 
     return 0;
 }
