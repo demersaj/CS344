@@ -222,7 +222,7 @@ void gamePlay() {
             // do mutex stuff here
         }
         else if (validInput == false) {
-            printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN\n");   // output error message
+            printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n");   // output error message
         }
 
 
