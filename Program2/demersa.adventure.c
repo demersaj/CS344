@@ -21,7 +21,7 @@ struct Room {
     int numConnections;
     char roomName[64];
     char roomType[64];
-    char outBoundConnections[9][64];    // stores pointer to room connections
+    char outBoundConnections[8][9];    // stores room connections
 };
 
 // global list of game rooms
@@ -134,18 +134,6 @@ void readFile() {
     }
 }
 
-int isEndRoom(char* room){
-    int i;
-
-    for(i = 0; i <MAX_NUM_ROOMS; i++) {
-        if (strcmp(room, gameRooms[i].roomName) == 0) {
-            if (strcmp(gameRooms[i].roomType, "END_ROOM") == 0) {
-                return 0;
-            }
-        }
-    }
-    return -1;
-}
 
 // returns the position of the starting room
 int getStartRoom() {
@@ -188,12 +176,13 @@ int getRoom(char* room) {
 // play the game
 void gamePlay() {
     int stepCount = 0;  // keeps track of how many rooms the user has been in
-    char roomPath[9][200];  // tracks the rooms the user has been in
+    char roomPath[200][9];  // tracks the rooms the user has been in
     bool end = false;   // end game condition
     char buffer[256];
     struct Room curRoom;
     int i;
     bool validInput = false;
+    int roomPos = 0;
 
     // read the game rooms from file
     readFile();
@@ -201,6 +190,7 @@ void gamePlay() {
     // output the players current location
     int start = getStartRoom();
     curRoom = gameRooms[start];
+    strcpy(roomPath[stepCount], curRoom.roomName);  // add start room to start path
     do {
         printf("\nCURRENT LOCATION: %s\n", curRoom.roomName);
 
@@ -216,19 +206,33 @@ void gamePlay() {
         memset(buffer, '\0', sizeof(buffer));   // clean out buffer, just in case
         scanf("%256s", buffer);
 
-        // if choice is valid
-            // move to room
-            // increment stepcount
-            // add to room path
-        // else
-            // output error message
-            // reprompt for input
+        // validate user input
+        validInput = false;
+        for (i = 0; i < curRoom.numConnections; i++) {  // if choice is valid
+            if (strcmp(curRoom.outBoundConnections[i], buffer) == 0) {
+                validInput = true;  // set valid to true
+                roomPos = getRoom(buffer);  // get new room position
+                curRoom = gameRooms[roomPos];   // set current room == new room
+                stepCount++;    // increment stepcount
+                strcpy(roomPath[stepCount], curRoom.roomName);  // add room to room path
+            }
+        }
+
+        if (strcmp(buffer, "time") == 0) { // if user asks to print time
+            // do mutex stuff here
+        }
+        else if (validInput == false) {
+            printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN\n");   // output error message
+        }
+
 
         // end condition
-        if (curRoom.roomType == "END_ROOM") {
-            printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
-            printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", stepCount);
-            end = true;
+        if (strcmp(curRoom.roomType, "END_ROOM") == 0) {    // if room type is end room
+            printf("\nYOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");      // victory message
+            printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", stepCount);    // output step count
+            for (i = 0; i < stepCount; i++)
+                printf("%s\n", roomPath[i]);    // output room path
+            end = true;     // end game
         }
     }
 
@@ -237,7 +241,6 @@ void gamePlay() {
 
 // controls threading of program
 void threading(){
-    return;
 }
 
 /* This function was adapted from code taken from: https://stackoverflow.com/questions/7411301/how-to-introduce-date-and-time-in-log-file */
@@ -259,18 +262,15 @@ void getTime() {
 // reads the time from file and outputs it to the console
 void printTime() {
     // read from file
-    return;
     // make sure the file exists
-
     // Read into buffer and output to console
-
 }
 
 int main() {
     getTime();  // TODO: DELETE
 
     gamePlay();
-    isEndRoom("Alehouse");
+    //isEndRoom("Alehouse");        // TODO: Testing only - DELETE
 
     return 0;
 }
