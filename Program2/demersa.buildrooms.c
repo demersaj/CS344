@@ -62,13 +62,15 @@ char* genRooms() {
 void createFiles(char* dirName) {
     chdir(dirName);     // change to correct directory
     char filePath[256];
+    int i;
+    int j;
 
-    for (int i = 0; i< MAX_NUM_ROOMS; i++) {
+    for (i = 0; i< MAX_NUM_ROOMS; i++) {
         sprintf(filePath, "%s.txt", roomList[i].roomName);  // create file name
         FILE* filePtr = fopen(filePath, "w");   // open file and write to it
         fprintf(filePtr, "ROOM NAME: %s\n", roomList[i].roomName);      // write room name to file
 
-        for (int j = 0; j < roomList[i].numConnections; j++) {
+        for (j = 0; j < roomList[i].numConnections; j++) {
             fprintf(filePtr, "CONNECTION %d: %s\n", j + 1, roomList[i].outBoundConnections[j]->roomName);
         }
 
@@ -87,14 +89,15 @@ void createFiles(char* dirName) {
 
 // initializes room structs
 void initRooms() {
+    int i;
+    int j;
 
     // set names to names picked above
-    for (int i = 0; i < MAX_NUM_ROOMS; i++) {
-        roomList[i].roomType = malloc(32 * sizeof(char));
+    for (i = 0; i < MAX_NUM_ROOMS; i++) {
         roomList[i].numConnections = 0;        // make sure num connections = 0
 
         // set connections to NULL
-        for (int j = 0; j < 7; j++) {
+        for (j = 0; j < 7; j++) {
             roomList[i].outBoundConnections[j] = NULL;
         }
 
@@ -113,10 +116,11 @@ void initRooms() {
 
 /* NOTE: some of the code outlined below is from the required reading 2.2: Program Outlining in Program 2 */
 
-// returns true if all rooms have 3 to 6 outbound connections, false otherwise
+// returns room index if the room has 3 to 6 outbound connections, -1 otherwise
 int isGraphFull(struct Room* roomList) {
+    int i;
 
-    for (int i = 0; i < MAX_NUM_ROOMS; i++) {
+    for (i = 0; i < MAX_NUM_ROOMS; i++) {
         if (roomList[i].numConnections  < 3) {
             return i;
         }
@@ -247,6 +251,7 @@ void printRoom(struct Room* r){
     if(r == NULL)
         return;
     if (DEBUG) {
+        int i;
         printf("Name: %s\n", r->roomName);
         printf("Connected rooms: %i\n", r->numConnections);
         char rType[12];
@@ -254,15 +259,16 @@ void printRoom(struct Room* r){
         printf("Room type: %s\n", rType);
         printf("RoomID: 0x%x\n", r);
         printf("Adjacent rooms: \n");
-        for (int i = 0; i < 7; i++) {
+        for (i = 0; i < 7; i++) {
             printf("\t0x%x\n", r->outBoundConnections[i]);
         }
     }
 }
 
 void listAllRooms(struct Room* roomList, int numRoom) {
+    int i;
     printf("\n\n\n\n\n");
-    for (int i = 0; i < numRoom; i++) {
+    for (i = 0; i < numRoom; i++) {
         printRoom(&roomList[i]);
     }
 }
