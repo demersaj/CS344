@@ -9,12 +9,13 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
+#include <unistd.h>
 
 #define MAX_NUM_ROOMS 7
 typedef enum {false = 0, true = 1} bool;
 
 // global mutex
-pthread_mutex_t mutex;
+pthread_mutex_t timeMutex;
 
 // room struct to hold info about game
 struct Room {
@@ -173,6 +174,75 @@ int getRoom(char* room) {
     return -1;
 }
 
+/* This function was adapted from code taken from: https://stackoverflow.com/questions/7411301/how-to-introduce-date-and-time-in-log-file */
+// gets the current time and writes it to file
+void getTime() {
+    char buffer[256];
+    struct tm *sTm;
+
+    // open currentTime.txt and write to it
+    FILE* myFile = fopen("currentTime.txt", "w+");
+    time_t now = time (0);
+    sTm = gmtime(&now);
+
+    strftime(buffer, sizeof(buffer), "%I:%M%p, %A, %B %d, %Y", sTm);    // store the formatted time
+    fputs(buffer, myFile);    // write the time to file
+    fclose(myFile);     // close file
+}
+
+// reads the time from file and outputs it to the console
+void printTime() {
+    FILE* myFile;
+    char buffer[256];
+
+    // read time and save to file
+    getTime();
+
+    // read from time file
+    myFile = fopen("currentTime.txt", "r");
+
+    // make sure the file exists
+    if (myFile == NULL)
+        printf ("Error opening file!\n");
+
+    // Read into buffer and output to console
+    while(fgets(buffer, 256, myFile) != NULL) {
+        printf ("%s\n", buffer);
+    }
+    fclose(myFile);
+}
+
+// creates a second thread to write the time file. Returns true to let main know it is finished executing
+bool timeThread(){
+    pthread_t thread2;
+    int result_code;
+
+    // initialize thread
+    pthread_mutex_init(&timeMutex, NULL);
+
+    // lock mutex so it cannot be used until it is done running
+    pthread_mutex_lock(&timeMutex);
+
+    // start new thread in the calling process; error check
+    result_code = pthread_create(&thread2, NULL, getTime, "time");
+    if (result_code != 0)
+        printf("Thread error!\n");
+
+    // unlock mutex
+    pthread_mutex_unlock(&timeMutex);
+
+    // join threads
+    pthread_join(thread2, NULL);
+
+    // destroy mutex
+    pthread_mutex_destroy(&timeMutex);
+
+    // sleep to make sure unlock finishes
+    sleep(1);
+
+    return true;
+}
+
 // play the game
 void gamePlay() {
     int stepCount = 0;  // keeps track of how many rooms the user has been in
@@ -219,7 +289,10 @@ void gamePlay() {
         }
 
         if (strcmp(buffer, "time") == 0) { // if user asks to print time
-            // do mutex stuff here
+            if(timeThread() == true) {  // make sure the file is done being written to
+                printf("\n");
+                printTime();    // print out the time
+            }
         }
         else if (validInput == false) {
             printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n");   // output error message
@@ -237,36 +310,6 @@ void gamePlay() {
     }
 
     while (end == false);
-}
-
-// controls threading of program
-void threading(){
-}
-
-/* This function was adapted from code taken from: https://stackoverflow.com/questions/7411301/how-to-introduce-date-and-time-in-log-file */
-// gets the current time and writes it to file
-void getTime() {
-    char buff[256];
-    struct tm *sTm;
-
-    // open currentTime.txt and write to it
-    FILE* myFile = fopen("currentTime.txt", "w+");
-    time_t now = time (0);
-    sTm = gmtime(&now);
-
-    strftime(buff, sizeof(buff), "%I:%M%p, %A, %B %d, %Y", sTm);    // store the formatted time
-    fputs(buff, myFile);    // write the time to file
-    fclose(myFile);     // close file
-}
-
-// reads the time from file and outputs it to the console
-void printTime() {
-    // read time and save to file
-    getTime();
-
-    // read from file
-    // make sure the file exists
-    // Read into buffer and output to console
 }
 
 int main() {
