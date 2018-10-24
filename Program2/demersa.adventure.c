@@ -261,16 +261,17 @@ void getTime() {
 
 // reads the time from file and outputs it to the console
 void printTime() {
+    // read time and save to file
+    getTime();
+
     // read from file
     // make sure the file exists
     // Read into buffer and output to console
 }
 
 int main() {
-    getTime();  // TODO: DELETE
 
     gamePlay();
-    //isEndRoom("Alehouse");        // TODO: Testing only - DELETE
 
     return 0;
 }
