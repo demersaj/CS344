@@ -38,7 +38,7 @@ char* findNewestDir(char** newestDirName) {
     char targetDirPrefix[32] = "demersa.rooms";     // file name we are searching for
     struct stat dirAttributes;      // holds the info we are looking for
     int newestDirTime = -1;     // holds newest time of directory for comparison
-    //newestDirName = malloc(256 * sizeof(char));    // holds the name of the newest dir
+
     memset(newestDirName, '\0', sizeof(newestDirName));
 
     currentDir = opendir(".");      // opens current directory
@@ -125,16 +125,17 @@ void readFile(char** newDirName) {
                 }
 
             }
+            fclose(fptr);   // close file
             j = 0;
             i++;
         }
 
     }
-    closedir(dir);  // close the previously opened directory
-
     // free allocated memory
     for (i = 0; i < 7; i++)
         free (filesList[i]);
+
+    closedir(dir);  // close the previously opened directory
 }
 
 
@@ -201,8 +202,8 @@ void printTime() {
         buffer[5] = tolower(buffer[5]);     // make AM/PM lowercase
         buffer[6] = tolower(buffer[6]);
         fputs(buffer, myFile);    // write the time to file
-        fclose(myFile);     // close file
     }
+    fclose(myFile);     // close file
 
     // unlock mutex
     pthread_mutex_unlock(&mutex);
