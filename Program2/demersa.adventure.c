@@ -32,13 +32,13 @@ struct Room gameRooms[MAX_NUM_ROOMS];
 
 /* The code below was adapted from Required Reading 2.4: Manipulating Directories */
 // loads files from directory and searches for starting room
-char* findNewestDir() {
+char* findNewestDir(char** newestDirName) {
     DIR* currentDir;
     struct dirent* fileInDir;
     char targetDirPrefix[32] = "demersa.rooms";     // file name we are searching for
     struct stat dirAttributes;      // holds the info we are looking for
     int newestDirTime = -1;     // holds newest time of directory for comparison
-    char* newestDirName = malloc(256 * sizeof(char));    // holds the name of the newest dir
+    //newestDirName = malloc(256 * sizeof(char));    // holds the name of the newest dir
     memset(newestDirName, '\0', sizeof(newestDirName));
 
     currentDir = opendir(".");      // opens current directory
@@ -57,11 +57,12 @@ char* findNewestDir() {
         }
     }
     closedir(currentDir);
+
     return newestDirName;
 }
 
 // open the requested file and read; populate name and room type
-void readFile() {
+void readFile(char** newDirName) {
     char* filesList[7];     // store names of files
     int i = 0;
     int j = 0;
@@ -78,7 +79,7 @@ void readFile() {
 
     // clear out folder name to prevent errors
     memset(gameDir, '\0', sizeof(gameDir));
-    strcpy(gameDir, findNewestDir());
+    strcpy(gameDir, findNewestDir(&newDirName));
     // make sure file exists
     if (gameDir == NULL) {
         printf("Error\n");
@@ -129,6 +130,11 @@ void readFile() {
         }
 
     }
+    closedir(dir);  // close the previously opened directory
+
+    // free allocated memory
+    for (i = 0; i < 7; i++)
+        free (filesList[i]);
 }
 
 
@@ -215,8 +221,10 @@ int main() {
             stepCount = 0;      // keeps track of how many rooms the user has been in
     FILE* myFile;
 
+
     // read the game rooms from file
-    readFile();
+    char* dirName = malloc(256 * sizeof(char));  // holds name of newest directory
+    readFile(&dirName);
 
     // lock mutex
     if (pthread_mutex_lock(&mutex) != 0)   // lock the mutex
@@ -315,6 +323,9 @@ int main() {
 
     // destroy mutex
     pthread_mutex_destroy(&mutex);
+
+    // free allocated memory
+    free(dirName);
 
     return 0;
 }
