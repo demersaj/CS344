@@ -10,12 +10,14 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #define MAX_NUM_ROOMS 7
 typedef enum {false = 0, true = 1} bool;
 
-// global mutex
-pthread_mutex_t timeMutex;
+// global mutexes and threads
+pthread_mutex_t lock[2];
+pthread_t thread[2];
 
 // room struct to hold info about game
 struct Room {
@@ -105,8 +107,6 @@ void readFile() {
                 if (strstr(buffer, "ROOM NAME:") != NULL) {
                     sscanf(buffer, "%*s %*s %s", name);
                     strcpy(gameRooms[i].roomName, name);
-
-                    //printf("Found the right name! %s\n", gameRooms[i].roomName); // TODO - DELETE
                 }
 
                     // find and store the connections
@@ -114,8 +114,6 @@ void readFile() {
                     sscanf(buffer, "%*s %*s %s", connection);
                     strcpy(gameRooms[i].outBoundConnections[j], connection);   // add the connection
                     gameRooms[i].numConnections++;      // increment number of connections
-
-                    //printf("Found a connection: %s\n", gameRooms[i].outBoundConnections[j]);    // TODO: delete
                     j++;
                 }
 
@@ -123,8 +121,6 @@ void readFile() {
                 else if (strstr(buffer, "ROOM TYPE:") != NULL) {
                     sscanf(buffer, "%*s %*s %s", roomType);
                     strcpy(gameRooms[i].roomType, roomType);
-
-                    //printf("Found the room type: %s\n", gameRooms[i].roomType);     //TODO: delete
                 }
 
             }
@@ -148,6 +144,7 @@ int getStartRoom() {
     return -1;
 }
 
+// used for debugging only
 void printRoomInfo() {
     int i;
     int j;
@@ -176,86 +173,114 @@ int getRoom(char* room) {
 
 /* This function was adapted from code taken from: https://stackoverflow.com/questions/7411301/how-to-introduce-date-and-time-in-log-file */
 // gets the current time and writes it to file
-void getTime() {
+// stays locked until called by main
+void getTimeThread(void* close) {
     char buffer[256];
     struct tm *sTm;
+    int *closeFlag = (int*) close;  // close flag
 
-    // open currentTime.txt and write to it
-    FILE* myFile = fopen("currentTime.txt", "w+");
-    time_t now = time (0);
-    sTm = gmtime(&now);
 
-    strftime(buffer, sizeof(buffer), "%I:%M%p, %A, %B %d, %Y", sTm);    // store the formatted time
-    fputs(buffer, myFile);    // write the time to file
-    fclose(myFile);     // close file
+    // loop until close flag is set
+    while(!*closeFlag) {
+        pthread_mutex_lock(&lock[0]);   // lock mutex until unlocked by main thread
+        printf ("Lock 0.\n");   // TODO: delete
+        if (*closeFlag)     // if close flag is set, break
+            break;
+
+        // open currentTime.txt and write to it
+        FILE *myFile = fopen("currentTime.txt", "w+");
+        if (myFile == NULL)
+            printf("Error opening file.\n");
+        time_t now = time(0);
+        sTm = localtime(&now);
+
+        strftime(buffer, sizeof(buffer), "%I:%M%p, %A, %B %d, %Y", sTm);    // store the formatted time TODO: fix format
+        buffer[5] = tolower(buffer[5]);     // make AM/PM lowercase
+        buffer[6] = tolower(buffer[6]);
+        fputs(buffer, myFile);    // write the time to file
+        fclose(myFile);     // close file
+
+        // unlock mutex
+        pthread_mutex_unlock(&lock[0]);
+        sleep(1);
+        printf ("Unlock 0\n");  //TODO: delete
+    }
 }
 
 // reads the time from file and outputs it to the console
-void printTime() {
+void* printTimeThread(void* close) {
     FILE* myFile;
     char buffer[256];
+    int *closeFlag = (int*) close;  // hold close flag
 
-    // read time and save to file
-    getTime();
+    // loop until main thread is ready
+    while (!*closeFlag) {
+        pthread_mutex_lock(&lock[1]);   // lock until main is read
+        printf("Lock 1\n"); // TODO - delete
+        if (*closeFlag)     // if close flag is set, break
+            break;
 
-    // read from time file
-    myFile = fopen("currentTime.txt", "r");
+        // read from time file
+        myFile = fopen("currentTime.txt", "r");
 
-    // make sure the file exists
-    if (myFile == NULL)
-        printf ("Error opening file!\n");
+        // make sure the file exists
+        if (myFile == NULL)
+            printf("Error opening file!\n");
 
-    // Read into buffer and output to console
-    while(fgets(buffer, 256, myFile) != NULL) {
-        printf ("%s\n", buffer);
+        // Read into buffer and output to console
+        while (fgets(buffer, 256, myFile) != NULL) {
+            printf("%s\n", buffer);
+        }
+        fclose(myFile);
+
+        // unlock mutex
+        pthread_mutex_unlock(&lock[1]);
+        sleep(1);
+        printf ("Unlock 1\n");  // TODO - delete
     }
-    fclose(myFile);
-}
-
-// creates a second thread to write the time file. Returns true to let main know it is finished executing
-bool timeThread(){
-    pthread_t thread2;
-    int result_code;
-
-    // initialize thread
-    pthread_mutex_init(&timeMutex, NULL);
-
-    // lock mutex so it cannot be used until it is done running
-    pthread_mutex_lock(&timeMutex);
-
-    // start new thread in the calling process; error check
-    result_code = pthread_create(&thread2, NULL, getTime, "time");
-    if (result_code != 0)
-        printf("Thread error!\n");
-
-    // unlock mutex
-    pthread_mutex_unlock(&timeMutex);
-
-    // join threads
-    pthread_join(thread2, NULL);
-
-    // destroy mutex
-    pthread_mutex_destroy(&timeMutex);
-
-    // sleep to make sure unlock finishes
-    sleep(1);
-
-    return true;
 }
 
 // play the game
-void gamePlay() {
-    int stepCount = 0;  // keeps track of how many rooms the user has been in
+int main() {
     char roomPath[200][9];  // tracks the rooms the user has been in
-    bool end = false;   // end game condition
-    char buffer[256];
-    struct Room curRoom;
+    bool end = false;       // end game condition
+    char buffer[256];       // buffer to hold user input
+    struct Room curRoom;    // room struct to hold the current room file
     int i;
-    bool validInput = false;
-    int roomPos = 0;
+    bool validInput = false;// holds bool to validate user input
+    int roomPos = 0,
+        result_code,
+        close = 0,
+        stepCount = 0;      // keeps track of how many rooms the user has been in
 
     // read the game rooms from file
     readFile();
+
+    // initialize both mutexes, then acquire lock for the main thread
+    for ( i = 0; i < 2; i++) {
+        if (pthread_mutex_init(&lock[i], NULL) != 0) {  // initialize mutex and check for error
+            printf ("Error - mutex %d not initialized.\n", i + 1);
+            return -1;  // return error code
+        }
+        pthread_mutex_lock(&lock[i]);   // lock each mutex
+        printf ("Thread %d is now locked.\n", i);   // TODO - delete
+    }
+
+    // create first thread to write time to file
+    result_code = pthread_create(&thread[0], NULL, &getTimeThread, &close);   // close flag should let the system know when execution is finished
+    printf ("Thread 0 is now created.\n");  // TODO - delete
+    if (result_code != 0){
+        printf ("Error - thread not created.\n");
+        return result_code;     // return error code
+    }
+
+    // create second thread to read time from file and output to console
+    result_code = pthread_create(&thread[1], NULL, &printTimeThread, &close);   // close flag should let the system know when execution is finished
+    printf ("Thread 1 is now created.\n");
+    if (result_code != 0) {
+        printf("Error - thread not created.\n");
+        return result_code;     // return error code
+    }
 
     // output the players current location
     int start = getStartRoom();
@@ -288,19 +313,22 @@ void gamePlay() {
             }
         }
 
-        if (strcmp(buffer, "time") == 0) { // if user asks to print time
-            if(timeThread() == true) {  // make sure the file is done being written to
-                printf("\n");
-                printTime();    // print out the time
-            }
+        // handle user request to print time. manage mutexes and threads
+        if (strcmp(buffer, "time") == 0) {
+            pthread_mutex_unlock(&lock[0]);     // unlock mutex for the getTime thread
+            sleep(1);   // sleep to allow time to thread to get lock
+            pthread_mutex_lock(&lock[0]);   // block thread from executing again
+            pthread_mutex_unlock(&lock[1]);     // unlock mutex for printTime thread
+            sleep(1);   // memory leak otherwise
+            pthread_mutex_lock(&lock[1]);   // lock mutex for printTime thread
         }
         else if (validInput == false) {
             printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n");   // output error message
         }
 
-
         // end condition
         if (strcmp(curRoom.roomType, "END_ROOM") == 0) {    // if room type is end room
+            strcpy(roomPath[++stepCount], curRoom.roomName);    // add final room to step path
             printf("\nYOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");      // victory message
             printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", stepCount);    // output step count
             for (i = 0; i < stepCount; i++)
@@ -308,13 +336,31 @@ void gamePlay() {
             end = true;     // end game
         }
     }
-
     while (end == false);
-}
 
-int main() {
+    close = 1;  // set close flag
 
-    gamePlay();
+    // unlock each mutex
+    for (i = 0; i < 2; i++) {
+        if (pthread_mutex_unlock(&lock[i]) != NULL) {
+            perror ("Error unlocking threads!\n");
+            return -1;
+        }
+        else
+            printf ("Thread %d is now unlocked.\n", i);     // TODO - delete
+    }
+
+    // join threads and wait for them to finish
+    for (i = 0; i < 2; i++) {
+        if (pthread_join(thread[i], NULL) != 0) {
+            perror ("Error - failed to join threads.\n");
+        }
+        else printf("Thread %d is now joined\n", i); // TODO delete
+    }
+
+    // destroy mutexes
+    pthread_mutex_destroy(&lock[0]);
+    pthread_mutex_destroy(&lock[1]);
 
     return 0;
 }
