@@ -218,6 +218,8 @@ void writeRoomList() {
 
     dirName = createDir();      // creates directory
     createFiles(dirName);  // creates the files for the directory
+
+    free(dirName);  // free allocated memory
 }
 
 
