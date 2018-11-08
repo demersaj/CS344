@@ -8,6 +8,6 @@
 void showStatus(int status);
 void catchSIGINT(int signal);
 void catchSigStop(int signal);
-char *readLine();
+char** parseLine(char* line);
 
 #endif //PROGRAM3_SMALLSH_H
