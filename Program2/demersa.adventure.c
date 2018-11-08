@@ -211,15 +211,15 @@ void printTime() {
 
 // play the game
 int main() {
-    char roomPath[200][9];  // tracks the rooms the user has been in
+    char roomPath[200][9];  // track the rooms the user has been in
     bool end = false;       // end game condition
     char buffer[256];       // buffer to hold user input
     struct Room curRoom;    // room struct to hold the current room file
     int i;
-    bool validInput = false;// holds bool to validate user input
+    bool validInput = false;// hold bool to validate user input
     int roomPos = 0,
             result_code = 0,
-            stepCount = 0;      // keeps track of how many rooms the user has been in
+            stepCount = 0;      // keep track of how many rooms the user has been in
     FILE* myFile;
 
 
