@@ -30,7 +30,8 @@ typedef enum {false = 0, true = 1} bool;    // allows use of bools
 
 bool isBgProcess,       // true if process should run in the background
     redirectInput,      // true if user requested to redirect the input
-    redirectOutput;     // true if user requested to redirect the output
+    redirectOutput,     // true if user requested to redirect the output
+    fgMode = false;     // foreground only mode. only set if SIGSTP is received.
 char* inputFile,        // hold input filename
     *outputFile;        // hold output filename
 int numArgs,            // count of the number of args provided
@@ -55,6 +56,8 @@ int main(int argc, char **argv) {
     ignore_action.sa_handler = SIG_IGN;     // ignore action
     sigaction(SIGINT, &ignore_action, NULL);     // prevent interruption of shell and bg processes
 
+    struct sigaction foreground_action;
+
     do {
         // clean up zombie processes
         cleanup();
@@ -65,7 +68,7 @@ int main(int argc, char **argv) {
         getline(&line, &buffer, stdin);     // read in a line from the user via stdin
         fflush(NULL);      // flush buffer
 
-        args = parseLine(line);
+        args = parse_line(line);
 
         //check if blank line is entered
         if (args[0] == NULL) {
@@ -163,7 +166,7 @@ int main(int argc, char **argv) {
 }
 
 /*************************************************************************************
- * Function:        parseLine()
+ * Function:        parse_line()
  * Description:     Takes input from main and parses it to determine if
  *                  the user requested I/O redirection, to run a background process,
  *                  or wants to use I/O files. Returns the parsed command.
@@ -172,7 +175,7 @@ int main(int argc, char **argv) {
  * Postconditions:  Global commands are set.
  * Returns:         Parsed command as an array of char pointers.
  ************************************************************************************/
-char** parseLine(char* line) {
+char** parse_line(char* line) {
     char** argPtr;      // holds command line arguments
     char* token;
     int bufferSize = MAX_ARGS;
@@ -194,11 +197,7 @@ char** parseLine(char* line) {
         argPtr[0] = NULL;
 
     while (token != NULL && done == false && numArgs < MAX_ARGS) {
-        if (strcmp(token, "&") == 0) {          // if background process is requested
-            isBgProcess = true;
-            done = true;
-        }
-        else if (strcmp(token, "<") == 0) {     // input redirection flag
+        if (strcmp(token, "<") == 0) {     // input redirection flag
             redirectInput = true;
             redirect = 1;
         }
@@ -219,11 +218,14 @@ char** parseLine(char* line) {
         }
         token = strtok(NULL, DELIM);  // get the next token
     }
+    if (strcmp(argPtr[numArgs - 1], "&") == 0 && fgMode == false) {          // if background process is requested
+        isBgProcess = true;
+    }
     return argPtr;
 }
 
 /*************************************************************************************
- * Function:        checkFileStatus()
+ * Function:        check_file_status()
  * Description:     Takes input from passed in file descriptor. If there is an error
  *                  opening the file (fd == -1), the function prints an error and exits.
  * Parameters:      int fd - file descriptor from opening filepath.
@@ -232,7 +234,7 @@ char** parseLine(char* line) {
  * Postconditions:  If there is an error, it is outputted to stderr.
  * Returns:         none
  ************************************************************************************/
-void checkFileStatus(int fd, char* file) {
+void check_file_status(int fd, char* file) {
     if (fd == -1) {
         fprintf(stderr,"Error with file: %s.\n", file);
         exit(1);
@@ -256,8 +258,8 @@ void checkFileStatus(int fd, char* file) {
         fd1 = open(inputFile, O_RDONLY);
 
         // error checking
-        checkFileStatus(fd1, inputFile);
-        checkFileStatus(dup2(fd1, 0), inputFile);  // redirect stdin - 0 now points to fd1
+        check_file_status(fd1, inputFile);
+        check_file_status(dup2(fd1, 0), inputFile);  // redirect stdin - 0 now points to fd1
 
     }
     // if user requests process to be run in background
@@ -265,8 +267,8 @@ void checkFileStatus(int fd, char* file) {
         fd1 = open("/dev/null", O_RDONLY); // redirect BG commands as stated in specs
 
         // error checking
-        checkFileStatus(fd1, NULL);
-        checkFileStatus(dup2(fd1, 0), NULL);
+        check_file_status(fd1, NULL);
+        check_file_status(dup2(fd1, 0), NULL);
     }
 
     // if user requests output redirection
@@ -274,8 +276,8 @@ void checkFileStatus(int fd, char* file) {
         fd2 = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0644);   // open file for writing only, create file if it doesn't exist
 
         // error checking
-        checkFileStatus(fd2, outputFile);
-        checkFileStatus(dup2(fd2, 1), outputFile);  // redirect stdout - 1 now points to fd2
+        check_file_status(fd2, outputFile);
+        check_file_status(dup2(fd2, 1), outputFile);  // redirect stdout - 1 now points to fd2
     }
 
 
