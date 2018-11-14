@@ -31,32 +31,40 @@ typedef enum {false = 0, true = 1} bool;    // allows use of bools
 bool isBgProcess,       // true if process should run in the background
     redirectInput,      // true if user requested to redirect the input
     redirectOutput,     // true if user requested to redirect the output
-    fgMode = false;     // foreground only mode. only set if SIGSTP is received.
+    fgOnlyMode = false; // foreground only mode. only set if SIGSTP is received.
 char* inputFile,        // hold input filename
     *outputFile;        // hold output filename
 int numArgs,            // count of the number of args provided
     status,             // status of current process
-    redirect;           // input or output redirection - 1 for input, 2 for output
+    redirect;           // input or output redirection: 1 for input, 2 for output
+int shellPid;           // hold pid of shell itself
 
 
 int main(int argc, char **argv) {
     bool exit = false;      // exit condition
     char* line = NULL;
     ssize_t buffer = MAX_CHARS;
-    int i,
-        processCount = 0;   // number of processes
+    int i,                  // number of processes
+        processCount = 0;   // number of background processes running
     char** args;            // array of pointers to the strings in the arg array
-    pid_t processes[128],   // hold list of open background processes
-        cpid;               // child process ID
+    pid_t cpid,             // child process
+        processes[128];     // array of running processes
     char exitStatus[256] = "No previous foreground process!\n";
 
-    // instance of sigaction struct
-    struct sigaction default_action = {0}, ignore_action = {0};
+    // instances of sigaction struct for default, ignore, and SIGTSTP actions
+    struct sigaction default_action = {0}, ignore_action = {0}, SIGTSTP_action = {0};
     default_action.sa_handler = SIG_DFL;     // default action
     ignore_action.sa_handler = SIG_IGN;     // ignore action
     sigaction(SIGINT, &ignore_action, NULL);     // prevent interruption of shell and bg processes
 
-    struct sigaction foreground_action;
+    // SIGTSTP handler to toggle foreground only mode
+    SIGTSTP_action.sa_handler = handle_SIGTSTP;
+    SIGTSTP_action.sa_flags = 0;
+    sigfillset(&(SIGTSTP_action.sa_mask));
+    sigaction(SIGTSTP, &SIGTSTP_action, NULL);
+
+    // get pid of shell to be used later
+    shellPid = getpid();
 
     do {
         // clean up zombie processes
@@ -64,7 +72,7 @@ int main(int argc, char **argv) {
 
         // get input from user
         printf(": ");
-        fflush(NULL);     // prompt user and flush buffer to avoid errors
+        fflush(NULL);       // prompt user and flush buffer to avoid errors
         getline(&line, &buffer, stdin);     // read in a line from the user via stdin
         fflush(NULL);      // flush buffer
 
@@ -72,14 +80,14 @@ int main(int argc, char **argv) {
 
         //check if blank line is entered
         if (args[0] == NULL) {
-            exit = false;       // ignore and keep going
+            continue;         // ignore and keep going
         }
 
-        // check if a comment is entered
+            // check if a comment is entered
         else if (strncmp(args[0], "#", 1) == 0)  // checks if first character is a #
-            exit = false;       // ignore and keep going
+            continue;       // ignore and keep going
 
-        // built in exit command
+            // built in exit command
         else if (strcmp(args[0], "exit") == 0) {
             // if there is more than just the exit arg
             if (numArgs > 1 || args[1]) {
@@ -89,33 +97,32 @@ int main(int argc, char **argv) {
                 // free memory
                 for (i = 0; i < MAX_ARGS; i++)
                     free(args[i]);
-            }
-            else {
+            } else {
                 exit = true;        // exit program
                 printf("Now killing all processes.\n");
                 fflush(NULL);
                 for (i = 0; i < processCount; i++)
-                    kill(processes[processCount], SIGTERM);     // terminates each process in array
+                    kill(processes[processCount], SIGTERM);     // terminates each background process in array
             }
         }
 
-        // built in cd command
+            // built in cd command
         else if (strcmp(args[0], "cd") == 0) {
             // if no args provided, change to the HOME directory
             if (numArgs == 1)
                 chdir(getenv("HOME"));
-            // else change to dir provided
+                // else change to dir provided
             else
                 chdir(args[1]);
         }
 
-        // built in status command
+            // built in status command
         else if (strcmp(args[0], "status") == 0) {
             printf("%s\n", exitStatus);
             fflush(NULL);
         }
 
-        // not a built-in command - pass arg to Bash to interpret
+            // not a built-in command - pass arg to Bash to interpret
         else {
             cpid = fork();  // fork to start new process
 
@@ -124,10 +131,10 @@ int main(int argc, char **argv) {
                 // error
                 case -1:
                     perror("Fork error!");
-                    return(1);
+                    return (1);
                     break;
 
-                // child process
+                    // child process
                 case 0:
                     if (!isBgProcess) {     // if foreground process
                         sigaction(SIGINT, &default_action, NULL);   // allow foreground process to be interrupted
@@ -135,16 +142,14 @@ int main(int argc, char **argv) {
                     execute_process(args);    // execute process using inputted args
                     break;
 
-                // parent process continues here
+                    // parent process continues here
                 default:
                     if (isBgProcess) {      // if background process
                         processes[processCount] = cpid;
                         processCount++;
                         printf("background pid is: %d\n", cpid);
                         fflush(NULL);
-                    }
-
-                    else {      // foreground process
+                    } else {      // foreground process
                         waitpid(cpid, &status, 0);      // wait for last child process to finish
 
                         if (WIFEXITED(status))
@@ -159,6 +164,7 @@ int main(int argc, char **argv) {
                     break;
             }
         }
+
     }
         while (!exit);
 
@@ -176,10 +182,12 @@ int main(int argc, char **argv) {
  * Returns:         Parsed command as an array of char pointers.
  ************************************************************************************/
 char** parse_line(char* line) {
-    char** argPtr;      // holds command line arguments
-    char* token;
-    int bufferSize = MAX_ARGS;
-    bool done = false;
+    char** argPtr;      // hold command line arguments
+    char* token,        // hold tokenized string
+        *num,           // hold converted string
+        *tok,
+        *buffer;
+    int i;
 
     // resets global flags
     isBgProcess = false;
@@ -189,14 +197,34 @@ char** parse_line(char* line) {
     status = 0;
     redirect = 0;
 
-    argPtr = malloc(bufferSize * sizeof(char*));
+    argPtr = malloc(sizeof(char*) * MAX_ARGS);
+
+
+    // replace $$ with pid
+    if (strstr(line, "$$") != NULL) {
+        num = integer_to_string(shellPid);
+        tok = strtok(line, " ");
+        buffer = malloc(sizeof(char*) * MAX_ARGS);
+
+        while (tok != NULL) {
+            if (strstr(tok, "$$") != NULL)
+                strcat(buffer, num);
+            else
+                strcat(buffer, tok);
+            strcat(buffer, " ");
+            tok = strtok(NULL, " ");
+        }
+        strcpy(line, buffer);
+
+    }
+
     token = strtok(line, DELIM);        // tokenizes the string to look for args
 
     // prevents errors with blank lines
     if (token == NULL)
         argPtr[0] = NULL;
 
-    while (token != NULL && done == false && numArgs < MAX_ARGS) {
+    while (token != NULL && numArgs < MAX_ARGS) {
         if (strcmp(token, "<") == 0) {     // input redirection flag
             redirectInput = true;
             redirect = 1;
@@ -210,16 +238,26 @@ char** parse_line(char* line) {
                 inputFile = token;
             else if (redirect == 2)    // set output file
                 outputFile = token;
-            else {                      // copy arg list
+
+            else {                      // copy arg list into array
                 argPtr[numArgs] = token;
                 numArgs++;
                 argPtr[numArgs] = NULL; // null terminate
             }
+
         }
         token = strtok(NULL, DELIM);  // get the next token
     }
-    if (strcmp(argPtr[numArgs - 1], "&") == 0 && fgMode == false) {          // if background process is requested
+    if (strcmp(argPtr[numArgs - 1], "&") == 0 && fgOnlyMode == false) {          // if background process is requested
         isBgProcess = true;
+        argPtr[numArgs - 1] = NULL;
+        numArgs--;
+    }
+    // removes & if process is not supposed to run in background
+    for (i = 0; i < numArgs; i++) {
+        if (strcmp(argPtr[i], "&") == 0 && fgOnlyMode == true) {
+            argPtr[i] = argPtr[i + 1];
+        }
     }
     return argPtr;
 }
@@ -261,6 +299,8 @@ void check_file_status(int fd, char* file) {
         check_file_status(fd1, inputFile);
         check_file_status(dup2(fd1, 0), inputFile);  // redirect stdin - 0 now points to fd1
 
+        close(fd1);
+
     }
     // if user requests process to be run in background
     else if (isBgProcess) {
@@ -269,6 +309,8 @@ void check_file_status(int fd, char* file) {
         // error checking
         check_file_status(fd1, NULL);
         check_file_status(dup2(fd1, 0), NULL);
+
+        close(fd1);
     }
 
     // if user requests output redirection
@@ -278,6 +320,8 @@ void check_file_status(int fd, char* file) {
         // error checking
         check_file_status(fd2, outputFile);
         check_file_status(dup2(fd2, 1), outputFile);  // redirect stdout - 1 now points to fd2
+
+        close(fd2);
     }
 
 
@@ -297,7 +341,7 @@ void check_file_status(int fd, char* file) {
 * Description:     Cleans up the zombie processes and handles background status.
 * Parameters:      none
 * Preconditions:   none
-* Postconditions:  Status is printed to stdout
+* Postconditions:  status is outputted to stdout
 * Returns:         none
 ************************************************************************************/
 void cleanup() {
@@ -316,4 +360,48 @@ void cleanup() {
             fflush(NULL);
         }
     }
+}
+
+/*************************************************************************************
+* Function:        handle_SIGTSTP()
+* Description:     SIGTSTP handler to catch signal sent to program and toggle foreground
+*                  only mode. If foreground only mode is not set, the program enters
+*                  foreground only mode. Otherwise, it exits foreground only mode.
+* Parameters:      int signal - signal number
+* Preconditions:   fgOnlyMode is set to either true or false
+* Postconditions:  status statement outputted to stdout, fgOnlyMode is set to true
+* Returns:         none
+************************************************************************************/
+void handle_SIGTSTP(int signal) {
+    char* output;
+
+    if (!fgOnlyMode) {
+        fgOnlyMode = true;
+
+        output = "Entering foreground only mode (& is now ignored)\n";
+        write(STDOUT_FILENO, output, strlen(output));   // must use write since printf is not allowed
+    }
+    else {
+        output = "Exiting foreground only mode\n";
+        write(STDOUT_FILENO, output, strlen(output));   // must use write since printf is not allowed
+
+        fgOnlyMode = false;
+    }
+}
+
+/*************************************************************************************
+* Function:        integer_to_string()
+* Description:     Converts the given integer to a string.
+* Parameters:      int x - the integer to be converted
+* Preconditions:   none
+* Postconditions:  none
+* Returns:         the converted int as a string
+* Reference:       https://stackoverflow.com/questions/36274902/convert-int-to-string-in-standard-c
+************************************************************************************/
+char* integer_to_string(int x) {
+    char* buffer = malloc(sizeof(char) * sizeof(int) * 4 + 1);
+    if (buffer)
+        sprintf(buffer, "%d", x);
+
+    return buffer;  // caller is expected to invoke free() on this buffer to release memory
 }
