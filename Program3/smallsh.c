@@ -59,8 +59,8 @@ int main(int argc, char **argv) {
 
     // SIGTSTP handler to toggle foreground only mode
     SIGTSTP_action.sa_handler = handle_SIGTSTP;
-    SIGTSTP_action.sa_flags = 0;
-    sigfillset(&(SIGTSTP_action.sa_mask));
+    sigfillset(&SIGTSTP_action.sa_mask);
+    SIGTSTP_action.sa_flags = SA_RESTART;
     sigaction(SIGTSTP, &SIGTSTP_action, NULL);
 
     // get pid of shell to be used later
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
 
         // get input from user
         printf(": ");
-        fflush(NULL);       // prompt user and flush buffer to avoid errors
+        fflush(stdout);       // prompt user and flush buffer to avoid errors
         getline(&line, &buffer, stdin);     // read in a line from the user via stdin
         fflush(NULL);      // flush buffer
 
@@ -375,17 +375,19 @@ void cleanup() {
 void handle_SIGTSTP(int signal) {
     char* output;
 
-    if (!fgOnlyMode) {
-        fgOnlyMode = true;
+    if (!fgOnlyMode) {      // if fg only mode is not enabled
+        fgOnlyMode = true;  // enable it
 
         output = "Entering foreground only mode (& is now ignored)\n";
         write(STDOUT_FILENO, output, strlen(output));   // must use write since printf is not allowed
+        fflush(NULL);
     }
-    else {
+    else {      // if fg only mode is enabled
         output = "Exiting foreground only mode\n";
         write(STDOUT_FILENO, output, strlen(output));   // must use write since printf is not allowed
+        fflush(NULL);
 
-        fgOnlyMode = false;
+        fgOnlyMode = false;     // exit fg only mode
     }
 }
 
